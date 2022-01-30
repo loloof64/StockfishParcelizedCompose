@@ -32,10 +32,13 @@
 #include "uci.h"
 #include "syzygy/tbprobe.h"
 
+#include "../utils/sharedioqueues.h"
+
 using namespace std;
 
 namespace Stockfish {
 
+extern std::ostream& operator<<(std::ostream& os, const UCI::OptionsMap& om);
 extern vector<string> setup_bench(const Position&, istream&);
 
 namespace {
@@ -89,7 +92,7 @@ namespace {
 
     Eval::NNUE::verify();
 
-    sync_cout << "\n" << Eval::trace(p) << sync_endl;
+    outputs.push(Eval::trace(p));
   }
 
 
@@ -112,8 +115,11 @@ namespace {
 
     if (Options.count(name))
         Options[name] = value;
-    else
-        sync_cout << "No such option: " << name << sync_endl;
+    else {
+        std::stringstream message;
+        message << "No such option: " << name;
+        outputs.push(message.str());
+    }
   }
 
 
@@ -221,6 +227,36 @@ namespace {
 
 } // namespace
 
+/*
+ * Adapted from operator<<(&ostream) from uci.cpp
+ */
+std::vector<std::string> optionsToLinesArray(UCI::OptionsMap om) {
+
+    std::vector<std::string> result;
+
+    for (size_t idx = 0; idx < om.size(); ++idx)
+        for (const auto& it : om)
+            if (it.second.getIdx() == idx)
+            {
+                std::stringstream os;
+                const UCI::Option& o = it.second;
+                os << "option name " << it.first << " type " << o.getType();
+
+                if (o.getType() == "string" || o.getType() == "check" || o.getType() == "combo")
+                    os << " default " << o.getDefaultValue();
+
+                if (o.getType() == "spin")
+                    os << " default " << int(stof(o.getDefaultValue()))
+                       << " min "     << o.getMin()
+                       << " max "     << o.getMax();
+
+                result.push_back(os.str());
+                break;
+            }
+
+    return result;
+}
+
 
 /// UCI::loop() waits for a command from stdin, parses it and calls the appropriate
 /// function. Also intercepts EOF from stdin to ensure gracefully exiting if the
@@ -259,22 +295,27 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "ponderhit")
           Threads.main()->ponder = false; // Switch to normal search
 
-      else if (token == "uci")
-          sync_cout << "id name " << engine_info(true)
-                    << "\n"       << Options
-                    << "\nuciok"  << sync_endl;
+      else if (token == "uci") {
+          std::stringstream message;
+          message << "id name " << engine_info(false);
+          outputs.push(message.str());
+          for (auto optionLine : optionsToLinesArray(Options)) {
+            outputs.push(optionLine);
+          }
+          outputs.push("uciok");
 
+      }
       else if (token == "setoption")  setoption(is);
       else if (token == "go")         go(pos, is, states);
       else if (token == "position")   position(pos, is, states);
       else if (token == "ucinewgame") Search::clear();
-      else if (token == "isready")    sync_cout << "readyok" << sync_endl;
+      else if (token == "isready")    outputs.push("readyok");
 
       // Additional custom non-UCI commands, mainly for debugging.
       // Do not use these commands during a search!
-      else if (token == "flip")     pos.flip();
+      /*else if (token == "flip")     pos.flip();
       else if (token == "bench")    bench(pos, is, states);
-      else if (token == "d")        sync_cout << pos << sync_endl;
+      else if (token == "d")        outputs.push(pos);
       else if (token == "eval")     trace_eval(pos);
       else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
       else if (token == "export_net")
@@ -285,8 +326,12 @@ void UCI::loop(int argc, char* argv[]) {
               filename = f;
           Eval::NNUE::save_eval(filename);
       }
-      else if (!token.empty() && token[0] != '#')
-          sync_cout << "Unknown command: " << cmd << sync_endl;
+      */
+      else if (!token.empty() && token[0] != '#') {
+          std::stringstream message;
+          message << "Unknown command: " << cmd;
+          outputs.push(message.str());
+      }
 
   } while (token != "quit" && argc == 1); // Command line args are one-shot
 }

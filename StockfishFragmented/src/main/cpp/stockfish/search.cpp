@@ -35,6 +35,10 @@
 #include "uci.h"
 #include "syzygy/tbprobe.h"
 
+#include "../utils/sharedioqueues.h"
+
+loloof64::LockedStringQueue outputs;
+
 namespace Stockfish {
 
 namespace Search {
@@ -159,8 +163,11 @@ namespace {
             nodes += cnt;
             pos.undo_move(m);
         }
-        if (Root)
-            sync_cout << UCI::move(m, pos.is_chess960()) << ": " << cnt << sync_endl;
+        if (Root) {
+            std::stringstream message;
+            message << UCI::move(m, pos.is_chess960()) << ": " << cnt;
+            outputs.push(message.str());
+        }
     }
     return nodes;
   }
@@ -198,7 +205,9 @@ void MainThread::search() {
   if (Limits.perft)
   {
       nodes = perft<true>(rootPos, Limits.perft);
-      sync_cout << "\nNodes searched: " << nodes << "\n" << sync_endl;
+      std::stringstream message;
+      message << "Nodes searched: " << nodes;
+      outputs.push(message.str());
       return;
   }
 
@@ -211,9 +220,10 @@ void MainThread::search() {
   if (rootMoves.empty())
   {
       rootMoves.emplace_back(MOVE_NONE);
-      sync_cout << "info depth 0 score "
-                << UCI::value(rootPos.checkers() ? -VALUE_MATE : VALUE_DRAW)
-                << sync_endl;
+      std::stringstream message;
+      message << "info depth 0 score "
+                << UCI::value(rootPos.checkers() ? -VALUE_MATE : VALUE_DRAW);
+      outputs.push(message.str());
   }
   else
   {
@@ -254,14 +264,15 @@ void MainThread::search() {
 
   // Send again PV info if we have a new best thread
   if (bestThread != this)
-      sync_cout << UCI::pv(bestThread->rootPos, bestThread->completedDepth, -VALUE_INFINITE, VALUE_INFINITE) << sync_endl;
+      outputs.push(UCI::pv(bestThread->rootPos, bestThread->completedDepth, -VALUE_INFINITE, VALUE_INFINITE));
 
-  sync_cout << "bestmove " << UCI::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
+  std::stringstream message;
+  message << "bestmove " << UCI::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
 
   if (bestThread->rootMoves[0].pv.size() > 1 || bestThread->rootMoves[0].extract_ponder_from_tt(rootPos))
-      std::cout << " ponder " << UCI::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
+      message << " ponder " << UCI::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
 
-  std::cout << sync_endl;
+  outputs.push(message.str());
 }
 
 
@@ -420,7 +431,7 @@ void Thread::search() {
                   && multiPV == 1
                   && (bestValue <= alpha || bestValue >= beta)
                   && Time.elapsed() > 3000)
-                  sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
+                  outputs.push(UCI::pv(rootPos, rootDepth, alpha, beta));
 
               // In case of failing low/high increase aspiration window and
               // re-search, otherwise exit the loop.
@@ -451,7 +462,7 @@ void Thread::search() {
 
           if (    mainThread
               && (Threads.stop || pvIdx + 1 == multiPV || Time.elapsed() > 3000))
-              sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
+              outputs.push(UCI::pv(rootPos, rootDepth, alpha, beta));
       }
 
       if (!Threads.stop)
@@ -1009,10 +1020,13 @@ moves_loop: // When in check, search starts here
 
       ss->moveCount = ++moveCount;
 
-      if (rootNode && thisThread == Threads.main() && Time.elapsed() > 3000)
-          sync_cout << "info depth " << depth
-                    << " currmove " << UCI::move(move, pos.is_chess960())
-                    << " currmovenumber " << moveCount + thisThread->pvIdx << sync_endl;
+      if (rootNode && thisThread == Threads.main() && Time.elapsed() > 3000) {
+          std::stringstream message;
+          message << "info depth " << depth
+                  << " currmove " << UCI::move(move, pos.is_chess960())
+                  << " currmovenumber " << moveCount + thisThread->pvIdx;
+          outputs.push(message.str());
+      }
       if (PvNode)
           (ss+1)->pv = nullptr;
 

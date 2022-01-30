@@ -1,10 +1,36 @@
 #include <jni.h>
 #include <string>
+#include "utils/stockfishchannel.h"
+#include "utils/jniutils.h"
+#include <jni.h>
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_loloof64_stockfishfragmented_NativeLib_stringFromJNI(
+loloof64::StockfishChannel getEngineChannel() {
+    static loloof64::StockfishChannel engineChannel;
+    return engineChannel;
+}
+
+/*
+ * TODO implement :
+ *
+        void newGame();
+        void setPositionFromStart(std::vector<std::string> moves, Position& pos, StateListPtr& states);
+        void setPosition(std::string positionFen, std::vector<std::string> moves, Position& pos, StateListPtr& states);
+        void go(std::vector<std::string> goCommandOptions, Position& pos, StateListPtr& states);
+
+        std::vector<std::string> getEngineOptions();
+        void setEngineOption(std::string name, std::string value);
+ */
+
+extern "C" JNIEXPORT void JNICALL Java_com_loloof64_stockfishfragmented_NativeLib_newGame(
         JNIEnv* env,
         jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
+    getEngineChannel().newGame();
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_loloof64_stockfishfragmented_NativeLib_setPositionFromStart(
+        JNIEnv* env,
+        jobject /* this */,
+        jobjectArray moves
+        ) {
+
 }

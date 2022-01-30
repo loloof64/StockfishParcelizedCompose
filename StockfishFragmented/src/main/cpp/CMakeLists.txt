@@ -26,7 +26,6 @@ add_library( # Sets the name of the library.
             stockfish/bitboard.cpp
             stockfish/endgame.cpp
             stockfish/evaluate.cpp
-            stockfish/lockedstringqueue.cpp
             stockfish/material.cpp
             stockfish/misc.cpp
             stockfish/movegen.cpp
@@ -35,8 +34,6 @@ add_library( # Sets the name of the library.
             stockfish/position.cpp
             stockfish/psqt.cpp
             stockfish/search.cpp
-            stockfish/sharedioqueues.h
-            stockfish/stockfish.cpp
             stockfish/thread.cpp
             stockfish/timeman.cpp
             stockfish/tt.cpp
@@ -46,6 +43,11 @@ add_library( # Sets the name of the library.
             stockfish/nnue/evaluate_nnue.cpp
             stockfish/nnue/features/half_ka_v2_hm.cpp
             stockfish/syzygy/tbprobe.cpp
+            utils/jniutils.cpp
+            utils/lockedstringqueue.cpp
+            utils/sharedioqueues.h
+            utils/stockfishchannel.cpp
+            stockfishfragmented.cpp
 )
 
 # Directories of header files.

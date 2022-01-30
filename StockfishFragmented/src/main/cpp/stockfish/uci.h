@@ -58,6 +58,14 @@ public:
   operator std::string() const;
   bool operator==(const char*) const;
 
+  // Added by loloof64
+  size_t getIdx() const { return idx; };
+  std::string getType() const { return type; };
+  std::string getDefaultValue() const { return defaultValue; };
+  int getMin() const { return min; };
+  int getMax() const { return max; };
+  // Added by loloof64 (end of section)
+
 private:
   friend std::ostream& operator<<(std::ostream&, const OptionsMap&);
 

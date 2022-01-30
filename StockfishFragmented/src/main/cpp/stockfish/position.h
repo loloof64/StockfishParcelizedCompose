@@ -30,6 +30,7 @@
 #include "types.h"
 
 #include "nnue/nnue_accumulator.h"
+#include <cinttypes>
 
 namespace Stockfish {
 
@@ -372,21 +373,21 @@ inline Thread* Position::this_thread() const {
 }
 
 inline void Position::put_piece(Piece pc, Square s) {
-
+  Bitboard sAsBitboard = (Bitboard) s; // added by loloof64
   board[s] = pc;
-  byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= s;
-  byColorBB[color_of(pc)] |= s;
+  byTypeBB[ALL_PIECES] |= byTypeBB[type_of(pc)] |= sAsBitboard;
+  byColorBB[color_of(pc)] |= sAsBitboard;
   pieceCount[pc]++;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
   psq += PSQT::psq[pc][s];
 }
 
 inline void Position::remove_piece(Square s) {
-
+  Bitboard sAsBitboard = (Bitboard) s; // added by loloof64
   Piece pc = board[s];
-  byTypeBB[ALL_PIECES] ^= s;
-  byTypeBB[type_of(pc)] ^= s;
-  byColorBB[color_of(pc)] ^= s;
+  byTypeBB[ALL_PIECES] ^= sAsBitboard;
+  byTypeBB[type_of(pc)] ^= sAsBitboard;
+  byColorBB[color_of(pc)] ^= sAsBitboard;
   board[s] = NO_PIECE;
   pieceCount[pc]--;
   pieceCount[make_piece(color_of(pc), ALL_PIECES)]--;
